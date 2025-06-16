@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logs</title>
+</head>
+<body>
+
+    <ul id="log-list">
+
+    </ul>
+    <script type="text/javascript">
+        const eventSource = new EventSource("http://localhost:8080/logs?id=abc")
+
+        eventSource.onmessage = msg => {
+            const list = document.getElementById("log-list")
+            const listElement = document.createElement("li")
+            listElement.innerHTML = msg.data
+            list.appendChild(listElement)
+        }
+
+        eventSource.onopen = msg => {
+            console.log(msg, "opened event source")
+        }
+
+        eventSource.onerror = err => {
+            console.error(err)
+        }
+    </script>
+</body>
+</html>

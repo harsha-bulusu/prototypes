@@ -1,0 +1,211 @@
+Key Concepts    Concept	Description
+------------------------------------------------------------------------------------------------------
+Document	    A collection of fields (e.g., title, body, etc.).
+Field	        A key-value pair. Lucene indexes these for searching.
+Analyzer	    Processes text into tokens (words). Different analyzers tokenize text differently.
+IndexWriter	    Writes documents to the index.
+IndexReader	    Reads from the index.
+Query	        Represents a search.
+Searcher	    Executes the query and returns results.
+
+
+
+🧱 Core Components of Lucene
+Here are the essential components of Lucene you should know beyond just Document, IndexWriter, and IndexReader:
+
+1. Analyzer
+Converts text into a stream of tokens for indexing/search.
+
+E.g., "The quick brown fox" → ["quick", "brown", "fox"]
+
+Normalizes --> Tokenizes --> Filters
+
+2. Tokenizer
+Part of an analyzer.
+
+Splits text into tokens based on rules (like whitespace or regex).
+
+3. TokenFilter
+Post-processes tokens (e.g., remove stopwords, lowercase).
+
+E.g., ["Quick", "the", "Fox"] → ["quick", "fox"]
+
+4. IndexWriter
+Adds, updates, deletes documents.
+
+Handles in-memory buffer, segments, flushes, merges.
+
+Manages write locks and two-phase commit for consistency.
+
+5. IndexReader
+Reads data from the index (but not for searching directly).
+
+Often used behind the scenes by searchers.
+
+6. IndexSearcher
+Uses IndexReader to execute queries.
+
+Supports scoring, ranking, relevance.
+
+7. Query
+Represents user search input (term, phrase, range, etc.)
+
+Can be parsed or manually constructed.
+
+8. Scorer
+Calculates how relevant a document is to a query.
+
+9. Directory
+Abstracts index storage (FSDirectory, RAMDirectory).
+
+Responsible for reading/writing files on disk or memory.
+
+10. Segment
+Lucene index is made of multiple segments (immutable mini-indexes).
+
+New documents go to new segments. Later merged.
+
+
+https://github.com/javasoze/clue/tree/lucene_9_2_0 - For Visualization
+
+
+Raw Input String (e.g., "<h1>Thé Working Day</h1>")
+       ↓
+CharFilter (optional)
+  - e.g., HTMLStripCharFilter → "Thé Working Day"
+       ↓
+Tokenizer (required)
+  - e.g., StandardTokenizer → ["Thé", "Working", "Day"]
+       ↓
+TokenFilter chain (optional but common)
+  - LowerCaseFilter → ["thé", "working", "day"]
+  - ASCIIFoldingFilter → ["the", "working", "day"]
+  - StopFilter → ["working", "day"]  (if "the" is a stopword)
+       ↓
+Final TokenStream used for:
+  - Indexing (IndexWriter)
+  - Searching (QueryParser)
+  - Highlighting, Suggestions, etc.
+
+
+
+
+--------------
+
+You're spot on, and let's now build a **complete, refined mental model** of the **write flow in Lucene**:
+
+---
+
+## 🧠 **Lucene Write-Time Analysis Pipeline**
+
+The flow is:
+
+```text
+Raw Input Text
+   ↓
+[CharFilters]      ← Preprocess text (e.g., remove HTML)
+   ↓
+[Tokenizer]        ← Break text into tokens (words, numbers, symbols)
+   ↓
+[TokenFilters]     ← Modify/filter/normalize the tokens
+   ↓
+Final Tokens       ← Stored in the inverted index
+```
+
+✔ This flow is always followed.
+❌ But each `Analyzer` decides **which components** to include in this pipeline.
+
+---
+
+## 🧱 Components of the Pipeline
+
+### 🔹 1. Character Filters (Pre-tokenization Text Cleaning)
+
+These work on the raw **`Reader`** before tokenization.
+
+| CharFilter                 | Purpose                                                                | Used In                   |
+| -------------------------- | ---------------------------------------------------------------------- | ------------------------- |
+| `HTMLStripCharFilter`      | Strips HTML/XML tags                                                   | Used via `CustomAnalyzer` |
+| `MappingCharFilter`        | Applies character mapping rules (e.g., curly quotes → straight quotes) | Rare/Custom               |
+| `PatternReplaceCharFilter` | Regex-based replacements                                               | Custom setups             |
+
+➡ Not commonly used in built-in analyzers except via custom pipelines.
+
+---
+
+### 🔹 2. Tokenizers (Core Token Breaking)
+
+These convert the cleaned text into **tokens** (basic units like words or terms).
+
+| Tokenizer             | Behavior                                | Used In Analyzers                    |
+| --------------------- | --------------------------------------- | ------------------------------------ |
+| `StandardTokenizer`   | Breaks on punctuation, whitespace, etc. | `StandardAnalyzer`, `CustomAnalyzer` |
+| `WhitespaceTokenizer` | Splits only on spaces                   | `WhitespaceAnalyzer`                 |
+| `KeywordTokenizer`    | Treats entire input as a single token   | `KeywordAnalyzer`                    |
+| `LetterTokenizer`     | Splits on non-letter characters         | Rare/custom                          |
+| `PatternTokenizer`    | Tokenizes using regex                   | `CustomAnalyzer`                     |
+| `ClassicTokenizer`    | Old Lucene tokenizer (deprecated use)   | `ClassicAnalyzer`                    |
+
+---
+
+### 🔹 3. Token Filters (Token-Level Processing)
+
+Work on a stream of tokens. Most important and flexible part.
+
+| TokenFilter            | Purpose                                  | Used In                                     |
+| ---------------------- | ---------------------------------------- | ------------------------------------------- |
+| `LowerCaseFilter`      | Converts tokens to lowercase             | Most analyzers                              |
+| `StopFilter`           | Removes stop words                       | `StandardAnalyzer`, `EnglishAnalyzer`, etc. |
+| `PorterStemFilter`     | English stemming                         | `EnglishAnalyzer`                           |
+| `ASCIIFoldingFilter`   | Replaces accents (e.g., `é` → `e`)       | Optional in `CustomAnalyzer`                |
+| `EdgeNGramTokenFilter` | Autocomplete-like behavior               | Custom search suggestions                   |
+| `NGramTokenFilter`     | Break into overlapping character n-grams | Custom search/fuzzy matching                |
+| `SynonymFilter`        | Handles synonyms                         | Via `SynonymMap` in custom analyzers        |
+| `SnowballFilter`       | Language-specific stemming               | `FrenchAnalyzer`, etc.                      |
+| `ShingleFilter`        | Multi-word phrases (e.g., "big red")     | Phrase-based search                         |
+| `LengthFilter`         | Filters out too short/long tokens        | Optional custom filters                     |
+
+---
+
+## 🧪 Examples of Built-in Analyzers and Their Components
+
+| Analyzer             | CharFilters | Tokenizer             | TokenFilters                         |
+| -------------------- | ----------- | --------------------- | ------------------------------------ |
+| `StandardAnalyzer`   | ❌ None      | `StandardTokenizer`   | `LowerCaseFilter`, `StopFilter`      |
+| `WhitespaceAnalyzer` | ❌ None      | `WhitespaceTokenizer` | ❌ None                               |
+| `KeywordAnalyzer`    | ❌ None      | `KeywordTokenizer`    | ❌ None                               |
+| `EnglishAnalyzer`    | ❌ None      | `StandardTokenizer`   | `LowerCase`, `Stop`, `PorterStem`    |
+| `ClassicAnalyzer`    | ❌ None      | `ClassicTokenizer`    | `LowerCase`, `Stop`, `ClassicFilter` |
+| `CustomAnalyzer`     | You define  | You define            | You define                           |
+
+---
+
+## ✅ Final Write-Time Mental Model
+
+### When indexing a document field:
+
+```text
+"Thé Fourth <b>Working</b> Day"
+   ↓
+[CharFilter]          → HTMLStripCharFilter → "Thé Fourth Working Day"
+   ↓
+[Tokenizer]           → StandardTokenizer → ["Thé", "Fourth", "Working", "Day"]
+   ↓
+[TokenFilters]        → LowerCase → ["thé", "fourth", "working", "day"]
+                      → ASCIIFolding → ["the", "fourth", "working", "day"]
+   ↓
+[Indexing]            → IndexWriter writes term → doc mappings
+```
+
+---
+🔠 Common Built-in Lucene Analyzers
+
+| Analyzer               | Description                                                                              | Use Case                                          |
+| ---------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| **StandardAnalyzer**   | General-purpose, uses Unicode-aware tokenizer and filters (stopwords, lowercasing, etc.) | ✅ Full-text search, web text                      |
+| **WhitespaceAnalyzer** | Tokenizes text on whitespace, no lowercasing                                             | ✅ Structured text, codes, programming identifiers |
+| **SimpleAnalyzer**     | Tokenizes by non-letters and lowercases all tokens                                       | ✅ Quick prototyping                               |
+| **StopAnalyzer**       | Like SimpleAnalyzer + removes common English stopwords                                   | ✅ Basic English search                            |
+| **KeywordAnalyzer**    | Treats the entire field as one token                                                     | ✅ Sorting, faceting, email, URLs, IDs             |
+| **PatternAnalyzer**    | Uses a regex for tokenization                                                            | ✅ Highly structured/custom patterns               |
+| **ClassicAnalyzer**    | Old version of StandardAnalyzer                                                          | Legacy systems                                    |

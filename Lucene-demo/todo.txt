@@ -1,0 +1,7 @@
+1. Read flow
+2. Write Flow
+3. Storage
+
+
+Continue exploring WRITE flow with various analyzers - understand how they are overriding Analyzer class methods and how they are building pipelines
+** Understand how they are using Character Filters, how they are tokenizing, and applying token filters

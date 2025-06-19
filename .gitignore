@@ -1,0 +1,54 @@
+# === General ===
+.DS_Store
+*.log
+*.class
+*.iml
+*.swp
+
+# === Maven build ===
+target/
+**/target/
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.eggs/
+dist/
+build/
+
+# === C build / debug symbols ===
+*.dSYM/
+*.o
+*.out
+*.exe
+*.a
+*.so
+*.dylib
+
+# === Logs / generated files ===
+logs/
+*.log
+data.log
+
+# === IDE/Editor config ===
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# === HTML (if generated) ===
+*.html
+
+# === Misc ===
+*.yml
+Info.plist
+
+
+# == EVENT-LOOP ===
+/event-loop/socket
+/event-loop/socket-kqueue
+/event-loop/socket-kqueue-one-client
+/event-loop/socket-kqueue-multiple-clients

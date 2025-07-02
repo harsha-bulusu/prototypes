@@ -1,0 +1,41 @@
+Create a Schema
+
+CREATE TABLE messages (
+    id BIGSERIAL PRIMARY KEY,
+    queue_name VARCHAR(255) NOT NULL,
+    body TEXT NOT NULL,
+
+    sent_at TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    available_at TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    visibility_timeout TIMESTAMPTZ(3) DEFAULT NULL,
+
+    receive_count INT DEFAULT 0,
+    locked_by VARCHAR(255),
+    status VARCHAR(32) NOT NULL DEFAULT 'queued'
+);
+
+insert into messages (queue_name, body) values ('email-notifications', 'harsha.s.bulusu@gmail.com');
+insert into messages (queue_name, body) values ('email-notifications', 'anjali.pathak@gmail.com');
+
+UPDATE messages
+SET
+  visibility_timeout = NOW() + INTERVAL '5 minutes',
+  receive_count = receive_count + 1,
+  locked_by = 'notification-consumer-1',
+  status = 'inflight'
+WHERE id = (SELECT id from messages where queue_name='email-notifications'
+and (visibility_timeout IS NULL OR visibility_timeout < NOW())
+and status = 'queued'
+ORDER BY sent_at LIMIT 1
+FOR UPDATE SKIP LOCKED);
+
+
+insert(queue_name, message) -  queued
+read() - in-flight
+commit() - processed
+
+UPDATE messages
+SET status = 'processed'
+where queue_name = '' and id = ?
+
+10:54 queued

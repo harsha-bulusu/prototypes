@@ -69,4 +69,4 @@ if __name__ == '__main__':
         sys.exit()
     # insert('email-notifications', "sriharsha16208@gmail.com")
     # read('email-notifications', 1, 1, 'harsha')
-    commit(2)
+    # commit(2)

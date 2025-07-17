@@ -52,3 +52,5 @@ Info.plist
 /event-loop/socket-kqueue
 /event-loop/socket-kqueue-one-client
 /event-loop/socket-kqueue-multiple-clients
+
+axios-interceptor-test

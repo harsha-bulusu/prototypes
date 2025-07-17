@@ -47,6 +47,8 @@
         2. Route inserts based on first letter of username.
         3. This simulates manual sharding logic.
 
+    💡 Can be implemented using SQLLite Database. No setup required. Explore for more information
+
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### 🤔 Thought Exercise

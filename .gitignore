@@ -43,7 +43,6 @@ data.log
 *.html
 
 # === Misc ===
-*.yml
 Info.plist
 
 

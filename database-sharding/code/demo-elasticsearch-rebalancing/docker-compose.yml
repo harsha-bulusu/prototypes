@@ -7,8 +7,9 @@ services:
     environment:
       - node.name=es01
       - cluster.name=es-disk-threshold-cluster
-      - discovery.seed_hosts=es02
-      - cluster.initial_master_nodes=es01,es02
+      - discovery.seed_hosts=es02,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - node.roles=master,data,ingest,remote_cluster_client
       - bootstrap.memory_lock=true
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
       - xpack.security.enabled=false
@@ -34,8 +35,9 @@ services:
     environment:
       - node.name=es02
       - cluster.name=es-disk-threshold-cluster
-      - discovery.seed_hosts=es01
-      - cluster.initial_master_nodes=es01,es02
+      - discovery.seed_hosts=es01,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - node.roles=master,data,ingest,remote_cluster_client
       - bootstrap.memory_lock=true
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
       - xpack.security.enabled=false
@@ -52,6 +54,34 @@ services:
       - esdata02:/usr/share/elasticsearch/data
     ports:
       - 9201:9200
+    networks:
+      - esnet
+
+  es03:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.2
+    container_name: es03
+    environment:
+      - node.name=es03
+      - cluster.name=es-disk-threshold-cluster
+      - discovery.seed_hosts=es01,es02
+      - cluster.initial_master_nodes=es01,es02,es03
+      - node.roles=master,data,ingest,remote_cluster_client
+      - bootstrap.memory_lock=true
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+      - xpack.monitoring.collection.enabled=true
+      - http.cors.enabled=true
+      - http.cors.allow-origin="*"
+      - http.cors.allow-headers=X-Requested-With,Content-Type,Content-Length,Authorization
+      - http.cors.allow-credentials=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata03:/usr/share/elasticsearch/data
+    ports:
+      - 9202:9200
     networks:
       - esnet
 
@@ -78,13 +108,15 @@ services:
 
 volumes:
   esdata01:
-    driver: local
+    driver: local  # Persistent storage (es01)
+  esdata02:
+    driver: local  # Ephemeral (tmpfs)
     driver_opts:
       type: tmpfs
       device: tmpfs
       o: size=100m,uid=1000,gid=1000
-  esdata02:
-    driver: local
+  esdata03:
+    driver: local  # Ephemeral (tmpfs)
     driver_opts:
       type: tmpfs
       device: tmpfs

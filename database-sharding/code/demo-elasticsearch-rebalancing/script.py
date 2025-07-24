@@ -8,7 +8,7 @@ ES_URL = "http://localhost:9200"
 INDEX = "skew-logs-demo"
 services = ["service-a", "service-b", "service-c"]
 
-TOTAL_DOCS = 1000000
+TOTAL_DOCS = 100000
 THREADS = 10
 BATCH_SIZE = TOTAL_DOCS // THREADS
 

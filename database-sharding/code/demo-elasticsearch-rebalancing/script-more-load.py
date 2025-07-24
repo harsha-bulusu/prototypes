@@ -9,7 +9,7 @@ ES_URL = "http://localhost:9200"
 INDEX = "skew-logs-demo"
 services = ["service-a", "service-b", "service-c"]
 
-TOTAL_DOCS = 1000000
+TOTAL_DOCS = 5000
 THREADS = 10
 BATCH_SIZE = TOTAL_DOCS // THREADS
 
@@ -46,9 +46,7 @@ def send_logs(thread_id, count):
                 print(f"[Thread-{thread_id}] Failed: {response.status_code}, {response.text}")
         except Exception as e:
             print(f"[Thread-{thread_id}] Error: {e}")
-
-        if i % 100 == 0:
-            print(f"[Thread-{thread_id}] Indexed {i} docs")
+    print(f"[Thread-{thread_id}] Indexed {i} docs")
 
 
 if __name__ == "__main__":

@@ -195,6 +195,3 @@ Build deep intuition around **why**, **how**, and **when** to shard databases, a
 * Diagrams.net for system drawings
 * Optional: Docker MongoDB cluster or Cassandra (advanced bonus)
 
----
-
-Would you like me to kick off **Day 1 now** with detailed concepts + a diagram + simulation plan?

@@ -4,12 +4,11 @@ Tracing Hotspots
 Failovers && replication
 
 🧪 What You Can Prototype:
-We’ll build on your existing Python setup:
-
-Add a new DirectoryShardManager that uses a central map (dict/JSON) for routing
 
 Simulate adding/removing shards, and track rebalance cost
 
 Implement a ConsistentHashRing class
 
 Add fault simulation: what happens if one shard fails?
+
+--> Implement Database migration step for hot shard problem

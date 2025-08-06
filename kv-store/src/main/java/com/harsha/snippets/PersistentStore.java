@@ -1,23 +1,22 @@
-package org.example;
+package com.harsha.snippets;
 
-import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Main {
+public class PersistentStore {
 
-    private File file;
-    private Map<String, Long> index;
-
-    public Main() {
-        file = new File("data.log");
-        index = new HashMap<>();
-        buildIndex();
-    }
+    private File file = new File("data.db");;
+    private static Map<String, Long> keyDir = new HashMap<>();
 
     private void buildIndex() {
         try (FileInputStream fis = new FileInputStream(file);
@@ -34,11 +33,11 @@ public class Main {
                     String key = new String(keyBytes, StandardCharsets.UTF_8);
                     int valueLength = dis.readInt();
                     if (valueLength == - 1) {
-                        if (index.containsKey(key)) index.remove(key);
+                        if (keyDir.containsKey(key)) keyDir.remove(key);
                     } else {
                         byte[] valueBytes = new byte[valueLength];
                         dis.readFully(valueBytes);
-                        index.put(key, position);
+                        keyDir.put(key, position);
                     }
                 } catch (EOFException exception) {
                     break;
@@ -49,57 +48,10 @@ public class Main {
             exception.printStackTrace();
         }
     }
-    public static void main(String[] args) throws IOException {
-        int port = 8080;
-        Main main = new Main();
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("Server started running on port: " + port);
-            while(true) {
-                Socket socket = serverSocket.accept();
-                main.processCommand(socket);
-            }
-        }
-    }
 
-    private void processCommand(Socket socket) {
-        try (InputStream inputStream = socket.getInputStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
-        ) {
-            String command = reader.readLine();
-            String[] parsedCommand = parseCommand(command);
-
-            String action = parsedCommand[0];
-            String key = parsedCommand[1];
-
-            String result = "";
-            switch(action) {
-                case "GET":
-                     result = processGetCommand(key);
-                     break;
-                case "SET":
-                    String value = parsedCommand[2];
-                    result = processSetCommand(key, value);
-                    break;
-                case "DEL":
-                    result = String.valueOf(processDelCommand(key)) + "\n";
-                    break;
-                default:
-                    System.out.println("Unknown command " + action);
-                    result = "Unknown command, please try GET, SET, OR DEL\n";
-            }
-
-            OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(result.getBytes(StandardCharsets.UTF_8));
-        } catch (IOException exception) {}
-    }
-
-    private String[] parseCommand(String command) {
-        return command.split(" ");
-    }
-
-    private String processSetCommand(String key, String value) {
+    private String processSetCommand(String key, byte[] value) {
         int keyLength = key.getBytes().length;
-        int valueLength = value.getBytes().length;
+        int valueLength = value.length;
 
         try (FileOutputStream fos = new FileOutputStream(file, true);
              DataOutputStream dos = new DataOutputStream(fos)
@@ -110,18 +62,18 @@ public class Main {
             dos.writeInt(keyLength);
             dos.write(key.getBytes(StandardCharsets.UTF_8));
             dos.writeInt(valueLength);
-            dos.write(value.getBytes(StandardCharsets.UTF_8));
+            dos.write(value);
 
-            index.put(key, position);
-            System.out.println(index);
+            keyDir.put(key, position);
+            System.out.println(keyDir);
             return key +  "=" + value + "\n";
         } catch(IOException exception) {}
         return null;
     }
 
     private String processGetCommand(String targetKey) {
-        if (index.containsKey(targetKey)) {
-            Long position = index.get(targetKey);
+        if (keyDir.containsKey(targetKey)) {
+            Long position = keyDir.get(targetKey);
             try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
                 // move to the position
                 raf.seek(position);
@@ -146,7 +98,7 @@ public class Main {
     }
 
     private boolean processDelCommand(String targetKey) {
-        if (index.containsKey(targetKey)) {
+        if (keyDir.containsKey(targetKey)) {
             int keyLength = targetKey.getBytes().length;
 
             try (FileOutputStream fos = new FileOutputStream(file, true);
@@ -156,12 +108,17 @@ public class Main {
                 dos.write(targetKey.getBytes(StandardCharsets.UTF_8));
                 dos.writeInt(-1);
 
-                index.remove(targetKey);
-                System.out.println(index);
+                keyDir.remove(targetKey);
+                System.out.println(keyDir);
                 return true;
             } catch (IOException exception) {}
         }
 
         return false;
+    }
+
+    public static void main(String[] args) throws IOException {
+        PersistentStore persistentStore = new PersistentStore();
+        persistentStore.buildIndex();
     }
 }
